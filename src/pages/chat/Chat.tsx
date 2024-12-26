@@ -107,10 +107,10 @@ const Chat = () => {
         try {
             const sessionsResponse = await getSessions(); // Call the getSessions API function
             setSessions(sessionsResponse);
-            setHasSessions(true);
+            setHasSessions(sessionsResponse && sessionsResponse.length > 0); // Update state based on whether sessions exist
         } catch (err) {
-            console.log("Failed to load sessions");
-            setHasSessions(false);
+            console.error("Failed to load sessions:", err);
+            setHasSessions(false); // Update state to indicate that no sessions are available
         }
         setIsLoading
     };
@@ -130,30 +130,23 @@ const Chat = () => {
                 setIsLoading(true);
                 setActiveCitation(undefined);
 
-                try {
-                    const session = await getSessionHistory(sessionId);
-                    if(session) {
-                        var answerHistory: [string, ChatAppResponse][] = [];
-                        if (session.history) {
-                            for (var i = 0; i < session.history.length; i = i + 2) {
-                                if (i < session.history.length - 1) {
-                                    const question = '' + session.history[i].content;
-                                    const response = '' + session.history[i + 1].content;
-                                    answerHistory.push([question, { message: response, session_id: sessionId } as ChatAppResponse]);
-                                }
-                            }
-
-                            lastQuestionRef.current = session.history[session.history.length - 1].content; //sessionAnswers[sessionAnswers.length - 1][1].message;
-                        }
-
-                        setSessionId(sessionId);
-                        setAnswers(answerHistory);
+                const session = await getSessionHistory(sessionId);
+                
+                var answerHistory = [];
+                for (var i = 0; i < session.history.length; i = i + 2) {
+                    if (i < session.history.length - 1) {
+                        const question = '' + session.history[i].content;
+                        const response = '' + session.history[i + 1].content;
+                        answerHistory.push([question, { message: response, session_id: sessionId } as ChatAppResponse]);
                     }
-                } catch(e) {
-                    // FYI, Chat Session History functionality is not supported by the API
                 }
-             
+            }
+                setSessionId(sessionId);
+                setAnswers(answerHistory);
+                
                 setIsLoading(false);
+                
+                lastQuestionRef.current = session.history[session.history.length - 1].content; //sessionAnswers[sessionAnswers.length - 1][1].message;
             }
         };
 
@@ -232,24 +225,15 @@ const Chat = () => {
             
             <div className={styles.chatRoot}>
                 {/* Render chat session container only if there are sessions to display */}
-                {hasSessions && sessions && (
+                {hasSessions && (
                 <div className={styles.chatSessionContainer}>
-                    <h3>Chat Sessions</h3>
+                    <h3>Previous Sessions</h3>
                     <ul>
-                        {sessions && sessions.length === 0 && (
-                            <i>No chat history yet.</i>
-                        )}
-                        {sessions && sessions.map((session) => (
-                            session.session_id !== "1234" && (
-                                <li key={session.session_id}>
-                                {session.session_id !== sessionId ? (
-                                    <a href="#" onClick={() => setSessionId(session.session_id)}>{session.title}</a>
-                                ) : (
-                                    <span>{session.title}</span>
-                                )}
-                                </li>
-                            )
-                            ))}
+                        {sessions.map((session) => (
+                            <li key={session.session_id}>    
+                                <a href="#" onClick={() => { setSessionId(session.session_id) }}>{session.title}</a>
+                            </li>
+                        ))}
                     </ul>
                 </div>
                 )}

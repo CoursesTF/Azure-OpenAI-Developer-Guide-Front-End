@@ -1,4 +1,4 @@
-import { AddSquare24Regular } from "@fluentui/react-icons";
+import { Delete24Regular } from "@fluentui/react-icons";
 import { Button } from "@fluentui/react-components";
 
 import styles from "./ClearChatButton.module.css";

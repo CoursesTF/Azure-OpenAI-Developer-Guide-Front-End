@@ -7,8 +7,6 @@ import styles from "./Chat.module.css";
 
 import {
     chatApi,
-    getSessions,
-    getSessionHistory,
     RetrievalMode,
     ChatAppResponse,
     ChatAppResponseOrError,
@@ -54,10 +52,6 @@ const Chat = () => {
     const [answers, setAnswers] = useState<[user: string, response: ChatAppResponse][]>([]);
     const [showGPT4VOptions, setShowGPT4VOptions] = useState<boolean>(false);
 
-    const [sessionId, setSessionId] = useState<string>("1234");
-    const [sessions, setSessions] = useState<{ session_id: string; title: string }[]>([]);
-    const [hasSessions, setHasSessions] = useState<boolean>(false); // Track if sessions are available
-
     const makeApiRequest = async (question: string) => {
         lastQuestionRef.current = question;
 
@@ -68,7 +62,7 @@ const Chat = () => {
         try {
             const request: ChatAppRequest = {
                 prompt: question,
-                session_id: sessionId
+                session_id: "1234" // TODO: Need to generate a session id
             };
 
             const response = await chatApi(request);
@@ -81,7 +75,6 @@ const Chat = () => {
                 setError(bodyText);
             } else {
                 const parsedResponse: ChatAppResponse = await response.json();
-                setSessionId(parsedResponse.session_id || sessionId);
                 setAnswers([...answers, [question, parsedResponse]]);
             }
             // if (shouldStream) {
@@ -102,57 +95,6 @@ const Chat = () => {
         }
     };
 
-    // Function to load sessions from the API
-    const loadSessions = async () => {
-        try {
-            const sessionsResponse = await getSessions(); // Call the getSessions API function
-            setSessions(sessionsResponse);
-            setHasSessions(sessionsResponse && sessionsResponse.length > 0); // Update state based on whether sessions exist
-        } catch (err) {
-            console.error("Failed to load sessions:", err);
-            setHasSessions(false); // Update state to indicate that no sessions are available
-        }
-        setIsLoading
-    };
-
-    // Load sessions when component mounts
-    useEffect(() => {
-        loadSessions();
-    }, []);
-    useEffect(() => {
-        loadSessions();
-    }, [answers]);
-
-    useEffect(() => {
-        const fetchSessionHistory = async () => {
-            if (sessionId) {
-                error && setError(undefined);
-                setIsLoading(true);
-                setActiveCitation(undefined);
-
-                const session = await getSessionHistory(sessionId);
-                
-                var answerHistory = [];
-                for (var i = 0; i < session.history.length; i = i + 2) {
-                    if (i < session.history.length - 1) {
-                        const question = '' + session.history[i].content;
-                        const response = '' + session.history[i + 1].content;
-                        answerHistory.push([question, { message: response, session_id: sessionId } as ChatAppResponse]);
-                    }
-                }
-            }
-                setSessionId(sessionId);
-                setAnswers(answerHistory);
-                
-                setIsLoading(false);
-                
-                lastQuestionRef.current = session.history[session.history.length - 1].content; //sessionAnswers[sessionAnswers.length - 1][1].message;
-            }
-        };
-
-        fetchSessionHistory();
-    }, [sessionId]);
-
     const clearChat = () => {
         lastQuestionRef.current = "";
         error && setError(undefined);
@@ -160,7 +102,6 @@ const Chat = () => {
         setAnswers([]);
         setIsLoading(false);
         setIsStreaming(false);
-        setSessionId("1234");
     };
 
     useEffect(() => chatMessageStreamEnd.current?.scrollIntoView({ behavior: "smooth" }), [isLoading]);
@@ -222,25 +163,11 @@ const Chat = () => {
 
     return (
         <div className={styles.container}>
-            
+            <div className={styles.commandsContainer}>
+                <ClearChatButton className={styles.commandButton} onClick={clearChat} disabled={!lastQuestionRef.current || isLoading} />
+            </div>
             <div className={styles.chatRoot}>
-                {/* Render chat session container only if there are sessions to display */}
-                {hasSessions && (
-                <div className={styles.chatSessionContainer}>
-                    <h3>Previous Sessions</h3>
-                    <ul>
-                        {sessions.map((session) => (
-                            <li key={session.session_id}>    
-                                <a href="#" onClick={() => { setSessionId(session.session_id) }}>{session.title}</a>
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-                )}
                 <div className={styles.chatContainer}>
-                    <div className={styles.commandsContainer}>
-                        <ClearChatButton className={styles.commandButton} onClick={clearChat} disabled={!lastQuestionRef.current || isLoading} />
-                    </div>
                     {!lastQuestionRef.current ? (
                         <div className={styles.chatEmptyState}>
                             <SparkleFilled fontSize={"120px"} primaryFill={"rgba(115, 118, 225, 1)"} aria-hidden="true" aria-label="Chat logo" />
